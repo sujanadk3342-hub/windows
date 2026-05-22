@@ -2,9 +2,9 @@
 
 ARG VERSION_ARG="latest"
 
-# =========================
-# AMD64 BUILD
-# =========================
+# ==========================================
+# AMD64 BUILD STAGE
+# ==========================================
 FROM ubuntu:24.04 AS build-amd64
 
 COPY --from=qemux/qemu:7.30 / /
@@ -41,31 +41,57 @@ ADD --chmod=664 \
     https://github.com/qemus/virtiso-whql/releases/download/v${VERSION_VIRTIO}-0/virtio-win-${VERSION_VIRTIO}.tar.xz \
     /var/drivers.txz
 
-# =========================
-# ARM64 BUILD
-# =========================
+# ==========================================
+# ARM64 BUILD STAGE
+# ==========================================
 FROM dockurr/windows-arm:${VERSION_ARG} AS build-arm64
 
-# =========================
+# ==========================================
 # FINAL IMAGE
-# =========================
+# ==========================================
 FROM build-${TARGETARCH}
 
 ARG VERSION_ARG="0.00"
 
 RUN echo "$VERSION_ARG" > /run/version
 
-# Storage directory
-RUN mkdir -p /storage
+# ==========================================
+# FIX STORAGE ISSUE
+# ==========================================
+RUN mkdir -p /storage && \
+    chmod 777 /storage
 
-# Ports
-EXPOSE 3389 8006
+ENV STORAGE="/storage"
 
-# Environment
-ENV VERSION="11"
-ENV RAM_SIZE="4G"
+# ==========================================
+# WINDOWS SETTINGS
+# ==========================================
+# Use Windows 7 or 8
+ENV VERSION="7"
+
+# Low resource usage
+ENV RAM_SIZE="1G"
 ENV CPU_CORES="2"
-ENV DISK_SIZE="64G"
+ENV DISK_SIZE="32G"
 
-# Start container
+# ==========================================
+# OPTIONAL PERFORMANCE SETTINGS
+# ==========================================
+ENV CPU_MODEL="host"
+ENV BOOT_MODE="windows_legacy"
+
+# ==========================================
+# PORTS
+# ==========================================
+EXPOSE 3389
+EXPOSE 8006
+
+# ==========================================
+# AUTO-FIX STORAGE AT CONTAINER START
+# ==========================================
+RUN sed -i 's|\[ ! -d "/storage" \].*|mkdir -p /storage \&\& chmod 777 /storage|g' /run/entry.sh || true
+
+# ==========================================
+# START CONTAINER
+# ==========================================
 ENTRYPOINT ["/usr/bin/tini", "-s", "/run/entry.sh"]
