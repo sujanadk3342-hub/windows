@@ -39,6 +39,15 @@ ARG VERSION_ARG="0.00"
 RUN echo "$VERSION_ARG" > /run/version
 
 #VOLUME /storage
+# ... (your other dockerfile lines)
+
+# 1. Keep this commented out or deleted like you did before:
+# VOLUME /storage
+
+# 2. ADD THIS LINE RIGHT BELOW IT:
+RUN mkdir -p /storage
+
+# ... (the rest of your dockerfile lines)
 EXPOSE 3389 8006
 
 ENV VERSION="11"
